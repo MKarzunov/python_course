@@ -1,5 +1,7 @@
 import numpy as np
 import re
+import pandas as pd
+import datetime as dt
 
 
 def task_1():
@@ -48,10 +50,48 @@ class Task6:
 
 
 def task_7(a: np.array, s: int, last: bool = False):
-    b = np.random.randint(100, size=(s, len(a)))
-    to_sum = np.dot(b, a)
-    x = np.sum(to_sum, axis=0)
-    pass
+    b = np.random.random((s, len(a)))
+    to_sum = a * b
+    x = np.sum(to_sum, axis=1)
+    res = np.maximum(x, 0) if last else np.sin(x)
+    return res, b
 
 
-task_7(np.array((1, 2, 3, 4, 5)), 10)
+r1, _ = task_7(np.random.random(5), 10)
+r2, _ = task_7(r1, 10)
+r3, _ = task_7(r2, 5, True)
+print(r3 * 100)
+
+
+def my_to_datetime(inp: pd.Series):
+    for item in inp:
+        if item[11:13] != '24':
+            item = pd.to_datetime(inp, format='%#m/%#d/%Y %H:%M')
+
+        time_fixed = item[0:11] + '00' + inp[13:]
+        item = pd.to_datetime(time_fixed, format='%m/%d/%Y %H:%M') + dt.timedelta(days=1)
+    return inp
+
+
+class Task8:
+    path = 'nlo.csv'
+
+    def read_file(self):
+        self.info = pd.read_csv(self.path, on_bad_lines='skip')
+        # self.info['datetime'] = pd.to_datetime(self.info['datetime'], errors='raise', format='%#m/%#d/%Y %H:%M')
+        self.info['datetime'] = my_to_datetime(self.info['datetime'])
+        pass
+
+    def get_most_frequent_country(self):
+        return self.info['state'].value_counts().index[0]
+
+    def get_most_frequent_month(self):
+        return self.info['state'].value_counts().index[0]
+
+
+t = Task8()
+t.read_file()
+print(t.get_most_frequent_country())
+
+m = dt.datetime.now()
+print(m.strftime('%#m/%#d/%Y %H:%M'))
