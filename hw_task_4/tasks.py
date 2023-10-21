@@ -1,7 +1,6 @@
 import numpy as np
 import re
 import pandas as pd
-import datetime as dt
 
 
 def task_1():
@@ -30,7 +29,7 @@ def task_5(number: int):
             not_found = False
             print(np.ones((i, int(number / i))), end='\n\n')
     if not_found:
-        print('No matrixes can be created')
+        print('No matriсes can be created')
 
 
 class Task6:
@@ -63,35 +62,73 @@ r3, _ = task_7(r2, 5, True)
 print(r3 * 100)
 
 
-def my_to_datetime(inp: pd.Series):
-    for item in inp:
-        if item[11:13] != '24':
-            item = pd.to_datetime(inp, format='%#m/%#d/%Y %H:%M')
-
-        time_fixed = item[0:11] + '00' + inp[13:]
-        item = pd.to_datetime(time_fixed, format='%m/%d/%Y %H:%M') + dt.timedelta(days=1)
+def my_to_datetime(inp: str):
+    if '24:00' in inp:
+        return inp.replace('24:00', '23:59')
     return inp
 
 
 class Task8:
     path = 'nlo.csv'
 
+    def __init__(self):
+        self.info = None
+
     def read_file(self):
         self.info = pd.read_csv(self.path, on_bad_lines='skip')
         # self.info['datetime'] = pd.to_datetime(self.info['datetime'], errors='raise', format='%#m/%#d/%Y %H:%M')
-        self.info['datetime'] = my_to_datetime(self.info['datetime'])
+        self.info['datetime'] = self.info['datetime'].apply(my_to_datetime)
+        self.info['datetime'] = pd.to_datetime(self.info['datetime'])
         pass
 
     def get_most_frequent_country(self):
         return self.info['state'].value_counts().index[0]
 
     def get_most_frequent_month(self):
-        return self.info['state'].value_counts().index[0]
+        k = self.info['datetime'].apply(pd.Timestamp.month_name)
+        return k.value_counts().index[0]
 
 
-t = Task8()
-t.read_file()
-print(t.get_most_frequent_country())
+def integer_translator(inp: str):
+    try:
+        return int(inp)
+    except ValueError:
+        return 0
 
-m = dt.datetime.now()
-print(m.strftime('%#m/%#d/%Y %H:%M'))
+
+def separator(inp: str):
+    while ' /' in inp:
+        inp = inp.replace(' /', '/')
+    while '/ ' in inp:
+        inp = inp.replace('/ ', '/')
+    inp = inp.strip('/')
+    return inp.split('/')
+
+
+class Task9:
+    path = 'all_ai_tool.csv'
+
+    def __init__(self):
+        self.info = None
+
+    def read_file(self):
+        self.info = pd.read_csv(self.path, converters={'Review': integer_translator, 'Useable For': separator})
+        self.info['Free/Paid/Other'] = self.info['Free/Paid/Other'].apply(lambda x: 'Free' if x == 'Free' else 'Paid')
+        pass
+
+    def most_reviewable_type(self):
+        k = self.info.groupby('Free/Paid/Other')['Review'].sum().sort_values(ascending=False)
+        return k.index[0]
+
+    def most_common_free_usage(self):
+        free = self.info[self.info['Free/Paid/Other'] == 'Free']
+        res = free.explode('Useable For').groupby('Useable For')['Useable For'].count().sort_values(ascending=False)
+        return res.index[0]
+
+    def get_best_tools(self, monetization: str = '', usage: str = '', category: str = ''):
+        by_mon = self.info[self.info['Free/Paid/Other'] == monetization] if monetization else self.info
+        by_cat = by_mon[by_mon['Major Category'] == category] if category else by_mon
+        exploded = by_cat.explode('Useable For')
+        by_usage = exploded[exploded['Useable For'] == usage] if usage else by_cat
+        best = by_usage.sort_values('Review', axis=0, ascending=False)
+        return best.head(3)['AI Tool Name'].to_list()
