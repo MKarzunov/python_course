@@ -44,7 +44,7 @@ def task6(category_name: str):
     by_cat = frame['Category'].value_counts()
     if category_name in by_cat.index:
         return 100 * by_cat[category_name] / n
-    return 'This category doesn\'t exist'
+    return "This category doesn't exist"
 
 
 def task7(first_date: str, second_date: str):
@@ -69,8 +69,19 @@ def task8():
 def task9():
     frame = pd.read_csv('BCT-USD.csv')
     frame['Date'] = pd.to_datetime(frame['Date'])
-    only_start = frame[frame['Date'].day == 1]
-    pass
-
-
-task9()
+    combined = frame.loc[[item['Date'].is_month_start or item['Date'].is_month_end for _, item in frame.iterrows()]]
+    result = []
+    start_open = None
+    for _, row in combined.iterrows():
+        if row['Date'].is_month_end:
+            if start_open is None:
+                continue
+            end_close = row['Close']
+            if end_close > start_open:
+                result.append(row['Date'].month_name() + ' ' + str(row['Date'].year))
+            start_open = None
+        else:
+            start_open = row['Open']
+    if result:
+        return result
+    print('No months found')
